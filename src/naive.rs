@@ -1,7 +1,7 @@
 use std::{fmt, ops};
 use std::cmp::Ordering;
 use {Intersection, Line, Polygon, Splitter};
-use euclid::TypedPoint3D;
+use euclid::{TypedPoint3D, TypedVector3D};
 use euclid::approxeq::ApproxEq;
 use num_traits::{Float, One, Zero};
 
@@ -27,7 +27,7 @@ impl<T, U> NaiveSplitter<T, U> {
 /// Find a closest intersection point between two polygons,
 /// across the specified direction.
 fn intersect_across<T, U>(a: &Polygon<T, U>, b: &Polygon<T, U>,
-                          dir: TypedPoint3D<T, U>)
+                          dir: TypedVector3D<T, U>)
                           -> TypedPoint3D<T, U>
 where
     T: Copy + fmt::Debug + PartialOrd + ApproxEq<T> +
@@ -42,7 +42,7 @@ where
     let pmax = pa.1.min(pb.1);
     let k = (pmin + pmax) / (T::one() + T::one());
     debug!("\t\tIntersection pa {:?} pb {:?} k {:?}", pa, pb, k);
-    dir * k
+    (dir * k).to_point()
 }
 
 fn partial_sort_by<T, F>(array: &mut [T], fun: F) where
@@ -136,11 +136,11 @@ impl<
     }
 
     //TODO: verify/prove that the sorting approach is consistent
-    fn sort(&mut self, view: TypedPoint3D<T, U>) -> &[Polygon<T, U>] {
+    fn sort(&mut self, view: TypedVector3D<T, U>) -> &[Polygon<T, U>] {
         // choose the most perpendicular axis among these two
         let axis_pre = {
-            let axis_pre0 = TypedPoint3D::new(T::one(), T::zero(), T::zero());
-            let axis_pre1 = TypedPoint3D::new(T::zero(), T::one(), T::zero());
+            let axis_pre0 = TypedVector3D::new(T::one(), T::zero(), T::zero());
+            let axis_pre1 = TypedVector3D::new(T::zero(), T::one(), T::zero());
             if view.dot(axis_pre0).abs() < view.dot(axis_pre1).abs() {
                 axis_pre0
             } else {
@@ -160,7 +160,8 @@ impl<
             let comp_y = intersect_across(a, b, axis_y);
             // line that tries to intersect both
             let line = Line {
-                origin: comp_x + comp_y,
+                // TODO(review): I don't understand the meaning of origin here
+                origin: comp_x + comp_y.to_vector(),
                 dir: view,
             };
             debug!("\t\tGot {:?}", line);
